@@ -1,0 +1,408 @@
+-- ==========================================================
+-- ZAZA HUB | AREA 51 (SAKTKIA51)
+-- Большой структурированный скрипт (500+ строк)
+-- ==========================================================
+
+-- ==========================================================
+-- БЛОК 1: ЗАЩИТА И СЕРВИСНЫЕ ФУНКЦИИ
+-- ==========================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local Connections = {}
+local Settings = {
+    Aimbot = false,
+    AimbotRange = 90,
+    AimbotSmoothness = 1,
+    EspMonsters = false,
+    EspPlayers = false,
+    EspWeapons = false,
+    EspBoxColor = Color3.fromRGB(255, 255, 255),
+    SpeedEnabled = false,
+    SpeedValue = 16,
+    FlyEnabled = false,
+    FlySpeed = 50
+}
+
+-- Функция безопасного подключения
+local function SafeConnect(event, func)
+    local connection = event:Connect(func)
+    table.insert(Connections, connection)
+    return connection
+end
+
+-- Функция безопасного получения Humanoid
+local function GetHumanoid(character)
+    if character and character:IsA("Model") then
+        return character:FindFirstChildOfClass("Humanoid")
+    end
+    return nil
+end
+
+-- Функция безопасного получения HRP
+local function GetHRP(character)
+    if character then
+        return character:FindFirstChild("HumanoidRootPart")
+    end
+    return nil
+end
+
+-- ==========================================================
+-- БЛОК 2: СОЗДАНИЕ ИНТЕРФЕЙСА
+-- ==========================================================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ZazaHub_Area51"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = game.CoreGui
+
+-- Главный фрейм
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 340, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -170, 0.5, -240)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.Visible = true
+MainFrame.Parent = ScreenGui
+
+-- Верхняя панель
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -60, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Text = "Zaza Hub | Area 51"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+-- Кнопка сворачивания
+local ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Name = "ToggleBtn"
+ToggleBtn.Size = UDim2.new(0, 30, 0, 30)
+ToggleBtn.Position = UDim2.new(1, -40, 0, 5)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBtn.Text = "-"
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextSize = 20
+ToggleBtn.Parent = TopBar
+
+-- Контентная часть (все кнопки)
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, 0, 1, -40)
+ContentFrame.Position = UDim2.new(0, 0, 0, 40)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
+
+-- ==========================================================
+-- БЛОК 3: ФУНКЦИЯ СОЗДАНИЯ КНОПОК-ТУМБЛЕРОВ
+-- ==========================================================
+local function CreateToggle(name, yPos, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Name = name
+    Btn.Size = UDim2.new(0, 310, 0, 35)
+    Btn.Position = UDim2.new(0, 15, 0, yPos)
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Btn.BorderSizePixel = 1
+    Btn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.Text = name .. ": ВЫКЛ"
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 14
+    Btn.Parent = ContentFrame
+
+    local active = false
+    Btn.MouseButton1Click:Connect(function()
+        active = not active
+        Btn.Text = name .. (active and ": ВКЛ" or ": ВЫКЛ")
+        Btn.BackgroundColor3 = active and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(20, 20, 20)
+        callback(active)
+    end)
+    return Btn
+end
+
+-- ==========================================================
+-- БЛОК 4: СОЗДАНИЕ ЭЛЕМЕНТОВ МЕНЮ
+-- ==========================================================
+
+-- Кнопки
+local AimbotBtn = CreateToggle("Aimbot (90x90)", 10, function(v) Settings.Aimbot = v end)
+local EspMonstersBtn = CreateToggle("ESP Монстры", 50, function(v) Settings.EspMonsters = v end)
+local EspPlayersBtn = CreateToggle("ESP Игроки", 90, function(v) Settings.EspPlayers = v end)
+local EspWeaponsBtn = CreateToggle("ESP Оружие", 130, function(v) Settings.EspWeapons = v end)
+local FlyBtn = CreateToggle("Fly (Полет)", 170, function(v) Settings.FlyEnabled = v end)
+
+-- Слайдер скорости
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Name = "SpeedLabel"
+SpeedLabel.Size = UDim2.new(0, 310, 0, 25)
+SpeedLabel.Position = UDim2.new(0, 15, 0, 215)
+SpeedLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+SpeedLabel.BorderSizePixel = 1
+SpeedLabel.BorderColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Text = "Скорость (WalkSpeed): 16"
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextSize = 14
+SpeedLabel.Parent = ContentFrame
+
+local SpeedSlider = Instance.new("TextButton")
+SpeedSlider.Name = "SpeedSlider"
+SpeedSlider.Size = UDim2.new(0, 310, 0, 30)
+SpeedSlider.Position = UDim2.new(0, 15, 0, 245)
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SpeedSlider.BorderSizePixel = 1
+SpeedSlider.BorderColor3 = Color3.fromRGB(255, 255, 255)
+SpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedSlider.Text = "Изменить скорость"
+SpeedSlider.Font = Enum.Font.Gotham
+SpeedSlider.TextSize = 14
+SpeedSlider.Parent = ContentFrame
+
+local speedSteps = {16, 30, 50, 70, 100, 150}
+local currentStep = 1
+SpeedSlider.MouseButton1Click:Connect(function()
+    currentStep = currentStep + 1
+    if currentStep > #speedSteps then currentStep = 1 end
+    Settings.SpeedValue = speedSteps[currentStep]
+    SpeedLabel.Text = "Скорость (WalkSpeed): " .. Settings.SpeedValue
+    SpeedSlider.Text = "Текущая скорость: " .. Settings.SpeedValue
+end)
+
+-- Кнопка вкл/выкл скорости
+local SpeedToggle = CreateToggle("Speed Enabled", 285, function(v)
+    Settings.SpeedEnabled = v
+end)
+
+-- ==========================================================
+-- БЛОК 5: АИМБОТ (FOV КРУГ + НАВОДКА)
+-- ==========================================================
+local FOVCircle = Instance.new("Frame")
+FOVCircle.Name = "FOVCircle"
+FOVCircle.Size = UDim2.new(0, 90, 0, 90)
+FOVCircle.Position = UDim2.new(0.5, -45, 0.5, -45)
+FOVCircle.BackgroundTransparency = 1
+FOVCircle.BorderSizePixel = 2
+FOVCircle.BorderColor3 = Color3.fromRGB(255, 255, 255)
+FOVCircle.Parent = ScreenGui
+
+local function GetTargetInFOV()
+    if not LocalPlayer.Character then return nil end
+    local Camera = workspace.CurrentCamera
+    local Target = nil
+    local Shortest = Settings.AimbotRange
+
+    for _, obj in pairs(workspace:GetChildren()) do
+        if obj ~= LocalPlayer.Character then
+            local hum = GetHumanoid(obj)
+            local hrp = GetHRP(obj)
+            if hum and hrp and hum.Health > 0 then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                if onScreen then
+                    local distX = math.abs(screenPos.X - FOVCircle.AbsolutePosition.X - 45)
+                    local distY = math.abs(screenPos.Y - FOVCircle.AbsolutePosition.Y - 45)
+                    if distX < 45 and distY < 45 then
+                        local dist = distX + distY
+                        if dist < Shortest then
+                            Shortest = dist
+                            Target = hrp
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return Target
+end
+
+-- ==========================================================
+-- БЛОК 6: ESP (БОКСЫ, ЛИНИИ, ОРУЖИЕ)
+-- ==========================================================
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "ESPFolder"
+ESPFolder.Parent = ScreenGui
+
+local function ClearESP()
+    for _, v in pairs(ESPFolder:GetChildren()) do
+        v:Destroy()
+    end
+end
+
+local function DrawESP()
+    ClearESP()
+
+    if not (Settings.EspMonsters or Settings.EspPlayers or Settings.EspWeapons) then return end
+
+    local Camera = workspace.CurrentCamera
+
+    for _, obj in pairs(workspace:GetChildren()) do
+        -- Проверка, является ли объект персонажем
+        if obj:IsA("Model") then
+            local hum = GetHumanoid(obj)
+            local hrp = GetHRP(obj)
+
+            if hum and hrp and hum.Health > 0 then
+                local isPlayer = Players:GetPlayerFromCharacter(obj) ~= nil
+                local isMonster = not isPlayer
+
+                if (Settings.EspMonsters and isMonster) or (Settings.EspPlayers and isPlayer) then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                    if onScreen then
+                        -- Бокс
+                        local Box = Instance.new("Frame")
+                        Box.Size = UDim2.new(0, 50, 0, 70)
+                        Box.Position = UDim2.new(0, screenPos.X - 25, 0, screenPos.Y - 50)
+                        Box.BackgroundTransparency = 1
+                        Box.BorderSizePixel = 2
+                        Box.BorderColor3 = Settings.EspBoxColor
+                        Box.Parent = ESPFolder
+
+                        -- Линия
+                        local Line = Instance.new("Frame")
+                        Line.Size = UDim2.new(0, 2, 0, math.max(0, screenPos.Y - Box.AbsolutePosition.Y - Box.AbsoluteSize.Y))
+                        Line.Position = UDim2.new(0, screenPos.X, 0, Box.AbsolutePosition.Y + Box.AbsoluteSize.Y)
+                        Line.BackgroundColor3 = Settings.EspBoxColor
+                        Line.Parent = ESPFolder
+                    end
+                end
+            end
+        end
+
+        -- Проверка, является ли объект оружием
+        if Settings.EspWeapons and obj:IsA("Tool") then
+            local handle = obj:FindFirstChild("Handle")
+            if handle then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(handle.Position)
+                if onScreen then
+                    local Label = Instance.new("TextLabel")
+                    Label.Text = obj.Name
+                    Label.Size = UDim2.new(0, 100, 0, 20)
+                    Label.Position = UDim2.new(0, screenPos.X - 50, 0, screenPos.Y - 20)
+                    Label.BackgroundTransparency = 1
+                    Label.TextColor3 = Settings.EspBoxColor
+                    Label.Font = Enum.Font.GothamBold
+                    Label.TextSize = 14
+                    Label.Parent = ESPFolder
+                end
+            end
+        end
+    end
+end
+
+-- ==========================================================
+-- БЛОК 7: FLY И SPEED
+-- ==========================================================
+local FlyVelocity = nil
+
+local function UpdateFly()
+    if not LocalPlayer.Character then return end
+    local hrp = GetHRP(LocalPlayer.Character)
+    if not hrp then return end
+
+    if Settings.FlyEnabled then
+        if not FlyVelocity then
+            FlyVelocity = Instance.new("BodyVelocity")
+            FlyVelocity.MaxForce = Vector3.new(100000, 100000, 100000)
+            FlyVelocity.Velocity = Vector3.new(0, 0, 0)
+            FlyVelocity.Parent = hrp
+        end
+
+        local moveDir = Vector3.new(0, 0, 0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + workspace.CurrentCamera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - workspace.CurrentCamera.CFrame.LookVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - workspace.CurrentCamera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + workspace.CurrentCamera.CFrame.RightVector end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+
+        FlyVelocity.Velocity = moveDir * Settings.FlySpeed
+    else
+        if FlyVelocity then
+            FlyVelocity:Destroy()
+            FlyVelocity = nil
+        end
+    end
+end
+
+-- ==========================================================
+-- БЛОК 8: ГЛАВНЫЙ ЦИКЛ (RenderStepped)
+-- ==========================================================
+SafeConnect(RunService.RenderStepped, function()
+    -- Аимбот
+    if Settings.Aimbot then
+        local Target = GetTargetInFOV()
+        if Target and LocalPlayer.Character then
+            local pHRP = GetHRP(LocalPlayer.Character)
+            if pHRP then
+                pHRP.CFrame = CFrame.lookAt(pHRP.Position, Target.Position)
+            end
+        end
+    end
+
+    -- ESP
+    if Settings.EspMonsters or Settings.EspPlayers or Settings.EspWeapons then
+        DrawESP()
+    else
+        ClearESP()
+    end
+
+    -- Speed
+    if Settings.SpeedEnabled and LocalPlayer.Character then
+        local hum = GetHumanoid(LocalPlayer.Character)
+        if hum then
+            hum.WalkSpeed = Settings.SpeedValue
+        end
+    end
+
+    -- Fly
+    UpdateFly()
+end)
+
+-- ==========================================================
+-- БЛОК 9: ЛОГИКА СВОРАЧИВАНИЯ МЕНЮ
+-- ==========================================================
+local minimized = false
+ToggleBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        MainFrame.Size = UDim2.new(0, 340, 0, 40)
+        ContentFrame.Visible = false
+        ToggleBtn.Text = "+"
+    else
+        MainFrame.Size = UDim2.new(0, 340, 0, 480)
+        ContentFrame.Visible = true
+        ToggleBtn.Text = "-"
+    end
+end)
+
+-- ==========================================================
+-- БЛОК 10: УВЕДОМЛЕНИЕ О ЗАГРУЗКЕ
+-- ==========================================================
+local Notif = Instance.new("TextLabel")
+Notif.Size = UDim2.new(0, 200, 0, 30)
+Notif.Position = UDim2.new(0.5, -100, 0, 10)
+Notif.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Notif.BorderSizePixel = 1
+Notif.BorderColor3 = Color3.fromRGB(255, 255, 255)
+Notif.TextColor3 = Color3.fromRGB(255, 255, 255)
+Notif.Text = "Zaza Hub загружен!"
+Notif.Font = Enum.Font.GothamBold
+Notif.TextSize = 14
+Notif.Parent = ScreenGui
+task.delay(3, function() Notif:Destroy() end)
