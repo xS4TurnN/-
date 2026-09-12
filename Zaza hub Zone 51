@@ -1,0 +1,330 @@
+-- Zaza Hub | Area 51 (Рабочая версия)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local Settings = {
+    Aimbot = false,
+    EspMonsters = false,
+    EspPlayers = false,
+    EspWeapons = false,
+    Speed = false,
+    SpeedValue = 16,
+    Fly = false,
+    FlySpeed = 50
+}
+
+-- ============================
+-- МЕНЮ
+-- ============================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ZazaHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 380, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -190, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(255, 255, 255)
+MainFrame.Parent = ScreenGui
+
+-- Вкладки сверху
+local TabBar = Instance.new("Frame")
+TabBar.Size = UDim2.new(1, 0, 0, 35)
+TabBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+TabBar.BorderSizePixel = 1
+TabBar.BorderColor3 = Color3.fromRGB(255, 255, 255)
+TabBar.Parent = MainFrame
+
+local TabCombat = Instance.new("TextButton")
+TabCombat.Size = UDim2.new(0, 90, 1, 0)
+TabCombat.Position = UDim2.new(0, 5, 0, 0)
+TabCombat.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabCombat.TextColor3 = Color3.fromRGB(255, 255, 255)
+TabCombat.Text = "Бой"
+TabCombat.Font = Enum.Font.GothamBold
+TabCombat.TextSize = 13
+TabCombat.Parent = TabBar
+
+local TabVisual = Instance.new("TextButton")
+TabVisual.Size = UDim2.new(0, 90, 1, 0)
+TabVisual.Position = UDim2.new(0, 100, 0, 0)
+TabVisual.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TabVisual.TextColor3 = Color3.fromRGB(255, 255, 255)
+TabVisual.Text = "Визуал"
+TabVisual.Font = Enum.Font.GothamBold
+TabVisual.TextSize = 13
+TabVisual.Parent = TabBar
+
+local TabMove = Instance.new("TextButton")
+TabMove.Size = UDim2.new(0, 90, 1, 0)
+TabMove.Position = UDim2.new(0, 195, 0, 0)
+TabMove.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TabMove.TextColor3 = Color3.fromRGB(255, 255, 255)
+TabMove.Text = "Движение"
+TabMove.Font = Enum.Font.GothamBold
+TabMove.TextSize = 13
+TabMove.Parent = TabBar
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 25, 0, 25)
+CloseBtn.Position = UDim2.new(1, -30, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Text = "X"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 12
+CloseBtn.Parent = TabBar
+
+-- Контент
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, 0, 1, -35)
+Content.Position = UDim2.new(0, 0, 0, 35)
+Content.BackgroundTransparency = 1
+Content.Parent = MainFrame
+
+local PageCombat = Instance.new("Frame")
+PageCombat.Size = UDim2.new(1, 0, 1, 0)
+PageCombat.BackgroundTransparency = 1
+PageCombat.Parent = Content
+
+local PageVisual = Instance.new("Frame")
+PageVisual.Size = UDim2.new(1, 0, 1, 0)
+PageVisual.BackgroundTransparency = 1
+PageVisual.Visible = false
+PageVisual.Parent = Content
+
+local PageMove = Instance.new("Frame")
+PageMove.Size = UDim2.new(1, 0, 1, 0)
+PageMove.BackgroundTransparency = 1
+PageMove.Visible = false
+PageMove.Parent = Content
+
+TabCombat.MouseButton1Click:Connect(function()
+    PageCombat.Visible = true
+    PageVisual.Visible = false
+    PageMove.Visible = false
+end)
+TabVisual.MouseButton1Click:Connect(function()
+    PageCombat.Visible = false
+    PageVisual.Visible = true
+    PageMove.Visible = false
+end)
+TabMove.MouseButton1Click:Connect(function()
+    PageCombat.Visible = false
+    PageVisual.Visible = false
+    PageMove.Visible = true
+end)
+
+-- Функция тумблеров
+local function CreateToggle(parent, name, yPos, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(0, 340, 0, 35)
+    Btn.Position = UDim2.new(0, 20, 0, yPos)
+    Btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    Btn.BorderSizePixel = 1
+    Btn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Btn.Text = name .. ": ВЫКЛ"
+    Btn.Font = Enum.Font.Gotham
+    Btn.TextSize = 14
+    Btn.Parent = parent
+
+    local active = false
+    Btn.MouseButton1Click:Connect(function()
+        active = not active
+        Btn.Text = name .. (active and ": ВКЛ" or ": ВЫКЛ")
+        Btn.BackgroundColor3 = active and Color3.fromRGB(0, 100, 0) or Color3.fromRGB(20, 20, 20)
+        callback(active)
+    end)
+end
+
+-- Бой
+CreateToggle(PageCombat, "Aimbot (90x90)", 10, function(v) Settings.Aimbot = v end)
+
+-- Визуал
+CreateToggle(PageVisual, "ESP Монстры", 10, function(v) Settings.EspMonsters = v end)
+CreateToggle(PageVisual, "ESP Игроки", 50, function(v) Settings.EspPlayers = v end)
+CreateToggle(PageVisual, "ESP Оружие", 90, function(v) Settings.EspWeapons = v end)
+
+-- Движение
+CreateToggle(PageMove, "Speed", 10, function(v) Settings.Speed = v end)
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(0, 340, 0, 25)
+SpeedLabel.Position = UDim2.new(0, 20, 0, 50)
+SpeedLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+SpeedLabel.BorderSizePixel = 1
+SpeedLabel.BorderColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Text = "Speed: 16"
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextSize = 13
+SpeedLabel.Parent = PageMove
+
+local SpeedSlider = Instance.new("TextButton")
+SpeedSlider.Size = UDim2.new(0, 340, 0, 30)
+SpeedSlider.Position = UDim2.new(0, 20, 0, 80)
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SpeedSlider.BorderSizePixel = 1
+SpeedSlider.BorderColor3 = Color3.fromRGB(255, 255, 255)
+SpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedSlider.Text = "Изменить скорость"
+SpeedSlider.Font = Enum.Font.Gotham
+SpeedSlider.TextSize = 13
+SpeedSlider.Parent = PageMove
+
+local speeds = {16, 30, 50, 70, 100, 150}
+local idx = 1
+SpeedSlider.MouseButton1Click:Connect(function()
+    idx = idx + 1
+    if idx > #speeds then idx = 1 end
+    Settings.SpeedValue = speeds[idx]
+    SpeedLabel.Text = "Speed: " .. Settings.SpeedValue
+end)
+
+CreateToggle(PageMove, "Fly", 120, function(v) Settings.Fly = v end)
+
+-- Сворачивание
+local RestoreBtn = Instance.new("TextButton")
+RestoreBtn.Size = UDim2.new(0, 60, 0, 25)
+RestoreBtn.Position = UDim2.new(0, 10, 0, 10)
+RestoreBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+RestoreBtn.BorderSizePixel = 1
+RestoreBtn.BorderColor3 = Color3.fromRGB(255, 255, 255)
+RestoreBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+RestoreBtn.Text = "Zaza"
+RestoreBtn.Font = Enum.Font.GothamBold
+RestoreBtn.TextSize = 12
+RestoreBtn.Visible = false
+RestoreBtn.Parent = ScreenGui
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    RestoreBtn.Visible = true
+end)
+RestoreBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    RestoreBtn.Visible = false
+end)
+
+-- ============================
+-- ЛОГИКА
+-- ============================
+
+-- FOV круг
+local FOVCircle = Instance.new("Frame")
+FOVCircle.Size = UDim2.new(0, 90, 0, 90)
+FOVCircle.Position = UDim2.new(0.5, -45, 0.5, -45)
+FOVCircle.BackgroundTransparency = 1
+FOVCircle.BorderSizePixel = 2
+FOVCircle.BorderColor3 = Color3.fromRGB(255, 255, 255)
+FOVCircle.Parent = ScreenGui
+
+-- Папка ESP
+local ESPFolder = Instance.new("Folder", ScreenGui)
+
+-- Флай
+local FlyVel = nil
+local function UpdateFly()
+    if not LocalPlayer.Character then return end
+    local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    if Settings.Fly then
+        if not FlyVel then
+            FlyVel = Instance.new("BodyVelocity")
+            FlyVel.MaxForce = Vector3.new(100000, 100000, 100000)
+            FlyVel.Velocity = Vector3.new(0, 0, 0)
+            FlyVel.Parent = hrp
+        end
+        local move = Vector3.new(0, 0, 0)
+        local cam = workspace.CurrentCamera
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+        if game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.new(0, 1, 0) end
+        FlyVel.Velocity = move * Settings.FlySpeed
+    else
+        if FlyVel then FlyVel:Destroy(); FlyVel = nil end
+    end
+end
+
+-- Главный цикл
+RunService.RenderStepped:Connect(function()
+    -- Aimbot (через Camera)
+    if Settings.Aimbot and LocalPlayer.Character then
+        local target = nil
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj ~= LocalPlayer.Character and obj:IsA("Model") then
+                local hum = obj:FindFirstChildOfClass("Humanoid")
+                local hrp = obj:FindFirstChild("HumanoidRootPart")
+                if hum and hrp and hum.Health > 0 then
+                    local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                    if onScreen and math.abs(sp.X - FOVCircle.AbsolutePosition.X - 45) < 45 and math.abs(sp.Y - FOVCircle.AbsolutePosition.Y - 45) < 45 then
+                        target = hrp
+                        break
+                    end
+                end
+            end
+        end
+        if target then
+            -- Меняем CFrame камеры, а не персонажа (безопаснее)
+            Camera.CFrame = CFrame.lookAt(Camera.CFrame.Position, target.Position)
+        end
+    end
+
+    -- ESP
+    for _, v in pairs(ESPFolder:GetChildren()) do v:Destroy() end
+    if Settings.EspMonsters or Settings.EspPlayers or Settings.EspWeapons then
+        for _, obj in pairs(workspace:GetChildren()) do
+            if obj:IsA("Model") then
+                local hum = obj:FindFirstChildOfClass("Humanoid")
+                local hrp = obj:FindFirstChild("HumanoidRootPart")
+                if hum and hrp and hum.Health > 0 then
+                    local isPlayer = Players:GetPlayerFromCharacter(obj) ~= nil
+                    if (Settings.EspMonsters and not isPlayer) or (Settings.EspPlayers and isPlayer) then
+                        local sp, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                        if onScreen then
+                            local Box = Instance.new("Frame", ESPFolder)
+                            Box.Size = UDim2.new(0, 50, 0, 70)
+                            Box.Position = UDim2.new(0, sp.X - 25, 0, sp.Y - 50)
+                            Box.BackgroundTransparency = 1
+                            Box.BorderSizePixel = 2
+                            Box.BorderColor3 = Color3.fromRGB(255, 255, 255)
+                        end
+                    end
+                end
+            end
+            if Settings.EspWeapons and obj:IsA("Tool") then
+                local handle = obj:FindFirstChild("Handle")
+                if handle then
+                    local sp, onScreen = Camera:WorldToViewportPoint(handle.Position)
+                    if onScreen then
+                        local Label = Instance.new("TextLabel", ESPFolder)
+                        Label.Text = obj.Name
+                        Label.Size = UDim2.new(0, 100, 0, 20)
+                        Label.Position = UDim2.new(0, sp.X - 50, 0, sp.Y - 20)
+                        Label.BackgroundTransparency = 1
+                        Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    end
+                end
+            end
+        end
+    end
+
+    -- Speed (через RenderStepped, но с постоянным обновлением)
+    if Settings.Speed and LocalPlayer.Character then
+        local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.WalkSpeed = Settings.SpeedValue
+        end
+    end
+
+    UpdateFly()
+end)
